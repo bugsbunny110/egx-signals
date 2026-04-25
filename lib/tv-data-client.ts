@@ -87,7 +87,7 @@ export async function fetchCandlesFromTV(
             const data = json.p[1]?.sds_1?.s;
             if (data && Array.isArray(data)) {
               candles = data.map(item => ({
-                time: item.v[0],
+                datetime: new Date(item.v[0] * 1000).toISOString(),
                 open: item.v[1],
                 high: item.v[2],
                 low: item.v[3],
