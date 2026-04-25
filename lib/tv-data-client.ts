@@ -54,10 +54,10 @@ export async function fetchCandlesFromTV(
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        ws.close();
-        reject(new Error(`Timeout fetching data for ${symbol}`));
+        ws.terminate(); 
+        reject(new Error(`Connection timeout (9s)`));
       }
-    }, 30000);
+    }, 9000);
 
     const sendMessage = (func: string, args: any[]) => {
       const msg = constructMessage(func, args);
@@ -143,8 +143,14 @@ export async function fetchAllFundamentalsFromTV(): Promise<Record<string, any>>
     try {
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Origin': 'https://www.tradingview.com',
+                'Referer': 'https://www.tradingview.com/'
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(8000)
         });
         const data = await response.json();
         const fundamentals: Record<string, any> = {};

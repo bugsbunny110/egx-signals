@@ -6,7 +6,7 @@ import type { StockSignal, SignalsResponse } from "@/types";
 
 // Next.js Route Segment Config — no caching at edge, handled internally
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 minute timeout for large scans
+export const maxDuration = 10; // Vercel Free limit is 10s
 
 async function scanSymbol(
   symbol: string,

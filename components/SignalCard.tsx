@@ -164,7 +164,7 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
                 }}
               >
                 <AlertCircle size={13} />
-                Data unavailable
+                <span title={stock.error}>{stock.error || "Data unavailable"}</span>
               </div>
             ) : stock.candlesAgo === null || stock.signal === "none" ? (
               <div
