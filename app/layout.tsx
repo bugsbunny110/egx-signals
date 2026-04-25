@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   keywords: "EGX, Egyptian stocks, trading signals, EMA, technical analysis",
 };
 
+import { SpeedInsights } from "@vercel/speed-insights/next";
+
 export default function RootLayout({
   children,
 }: {
@@ -18,6 +20,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body>
         <Providers>{children}</Providers>
+        <SpeedInsights />
       </body>
     </html>
   );
