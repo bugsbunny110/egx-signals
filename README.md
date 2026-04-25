@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🇪🇬 EGX Trading Signal Dashboard
 
-## Getting Started
+A high-performance, real-time trading signal dashboard for the Egyptian Stock Exchange (EGX). This application monitors all 254+ active EGX stocks, detecting buy and sell signals based on a custom self-adaptive technical analysis engine.
 
-First, run the development server:
+## 🚀 Features
 
+- **Full Market Coverage**: Scans 254+ active EGX stocks (mapped from TradingView).
+- **Self-Adaptive Technical Engine**: Custom Pine Script logic ported to TypeScript, using adaptive Z-Score filters and volume trend analysis.
+- **Real-Time Data**: Connects directly to TradingView's WebSocket datafeed via a local Python proxy (no API keys required).
+- **Dual Timeframe Analysis**: Monitors signals on both **H1 (1-Hour)** and **H4 (4-Hour)** intervals.
+- **Intra-Candle Detection**: Real-time "LIVE" status badges for active signals.
+- **AI-Powered Analysis**: High-fidelity technical and fundamental analysis panel for each stock.
+- **Automated Trade Setup**: Calculates entry, stop-loss, and three take-profit targets based on institutional risk/reward ratios.
+- **Market Hours Aware**: Auto-refreshes every 15 minutes only during EGX market hours (Sun-Thu, 07:00-17:00 Egypt time).
+
+## 🛠 Tech Stack
+
+- **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS (minimal), Lucide Icons.
+- **Data Backend**: Python 3 (Flask) handling WebSocket proxy and cache.
+- **Styling**: Custom CSS and Framer-inspired animations for a premium dark-mode feel.
+
+## 📦 Installation & Setup
+
+### 1. Prerequisites
+- Node.js (v18+)
+- Python 3.9+
+- Git
+
+### 2. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/bugsbunny110/egx-signals.git
+cd egx-signals
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Install Dependencies
+```bash
+npm install
+pip install flask requests websocket-client flask-cors
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Run the Application
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+You need two terminals running simultaneously:
 
-## Learn More
+**Terminal 1: Data Server (Python)**
+```bash
+python tv_server.py
+```
 
-To learn more about Next.js, take a look at the following resources:
+**Terminal 2: Web App (Next.js)**
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Visit `http://localhost:3000` to see the dashboard.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📊 Signal Engine Details
+The core logic uses a proprietary "Universal Self-Adaptive EMA" ported from Pine Script. It calculates:
+- Adaptive Z-Score for trend direction.
+- Relative volume filter to confirm institutional activity.
+- Triple Take-Profit (TP) levels based on support/resistance and dynamic ATR estimates.
 
-## Deploy on Vercel
+## ⚖️ Disclaimer
+This tool is for educational and informational purposes only. Trading involves risk. Always conduct your own research before making investment decisions.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 License
+MIT
