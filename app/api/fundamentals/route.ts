@@ -4,13 +4,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest) {
   try {
-    const res = await fetch("http://localhost:8765/fundamentals", {
-      next: { revalidate: 300 }, // cache for 5 min
-    });
-    if (!res.ok) {
-      return NextResponse.json({ error: "Python server error" }, { status: 502 });
-    }
-    const data = await res.json();
+    const { fetchAllFundamentalsFromTV } = await import("@/lib/tv-data-client");
+    const data = await fetchAllFundamentalsFromTV();
     return NextResponse.json(data, {
       headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60" },
     });
