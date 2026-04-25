@@ -19,6 +19,7 @@ function prependHeader(msg: string): string {
 }
 
 function constructMessage(func: string, args: any[]): string {
+  // Python's json.dumps(..., separators=(',', ':')) means NO SPACES
   return JSON.stringify({ m: func, p: args });
 }
 
@@ -41,7 +42,8 @@ export async function fetchCandlesFromTV(
   const tvInterval = tvIntervalMap[interval] || interval;
 
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket("wss://data.tradingview.com/socket.io/websocket", {
+    // Matched exact Python URL
+    const ws = new WebSocket("wss://data.tradingview.com/socket.io/websocket?from=chart&date=2024_12_06", {
         headers: {
             "Origin": "https://www.tradingview.com",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -65,18 +67,38 @@ export async function fetchCandlesFromTV(
     };
 
     ws.on('open', () => {
-      // Initialization messages
+      // Direct twin of the working Python initialization
       sendMessage("set_auth_token", ["unauthorized_user_token"]);
       sendMessage("chart_create_session", [chartSession, ""]);
       sendMessage("quote_create_session", [quoteSession]);
-      sendMessage("quote_set_fields", [quoteSession, "lp", "last_price", "ch", "chp", "volume"]);
-      sendMessage("quote_add_symbols", [quoteSession, symbolStr, { "flags": ["force_skipped"] }]);
-      sendMessage("resolve_symbol", [chartSession, "sds_sym_1", `={"symbol":"${symbolStr}","adjustment":"splits"}`]);
-      sendMessage("create_series", [chartSession, "sds_1", "s1", "sds_sym_1", tvInterval, bars, ""]);
+      
+      sendMessage("quote_set_fields", [quoteSession, 
+        "ch", "chp", "current_session", "description", 
+        "local_description", "language", "exchange", 
+        "fractional", "is_tradable", "lp", "lp_time", 
+        "minmov", "minmove2", "original_name", "pricescale", 
+        "pro_name", "short_name", "type", "update_mode", 
+        "volume", "currency_code"
+      ]);
+
+      sendMessage("quote_add_symbols", [quoteSession, symbolStr, { "flags": ["force_permission"] }]);
+      
+      sendMessage("resolve_symbol", [chartSession, "symbol_1", 
+        `={"symbol":"${symbolStr}","adjustment":"splits"}`
+      ]);
+      
+      sendMessage("create_series", [chartSession, "s1", "s1", "symbol_1", tvInterval, bars]);
     });
 
     ws.on('message', (data) => {
       const raw = data.toString();
+      
+      // Heartbeat handling
+      if (raw.startsWith('~h~')) {
+        ws.send(prependHeader(raw));
+        return;
+      }
+
       const messages = raw.split(/~m~\d+~m~/).filter(m => m.trim().startsWith('{'));
 
       for (const m of messages) {
@@ -84,7 +106,7 @@ export async function fetchCandlesFromTV(
           const json = JSON.parse(m);
           
           if (json.m === 'timescale_update') {
-            const data = json.p[1]?.sds_1?.s;
+            const data = json.p[1]?.s1?.s; // Python used 's1'
             if (data && Array.isArray(data)) {
               candles = data.map(item => ({
                 datetime: new Date(item.v[0] * 1000).toISOString(),
