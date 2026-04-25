@@ -67,21 +67,9 @@ export async function fetchCandlesFromTV(
     };
 
     ws.on('open', () => {
-      // Direct twin of the working Python initialization
+      // Use ONLY Chart Session (more stable, everything we need for candles)
       sendMessage("set_auth_token", ["unauthorized_user_token"]);
       sendMessage("chart_create_session", [chartSession, ""]);
-      sendMessage("quote_create_session", [quoteSession]);
-      
-      sendMessage("quote_set_fields", [quoteSession, 
-        "ch", "chp", "current_session", "description", 
-        "local_description", "language", "exchange", 
-        "fractional", "is_tradable", "lp", "lp_time", 
-        "minmov", "minmove2", "original_name", "pricescale", 
-        "pro_name", "short_name", "type", "update_mode", 
-        "volume", "currency_code"
-      ]);
-
-      sendMessage("quote_add_symbols", [quoteSession, symbolStr, { "flags": ["force_permission"] }]);
       
       sendMessage("resolve_symbol", [chartSession, "symbol_1", 
         `={"symbol":"${symbolStr}","adjustment":"splits"}`
@@ -105,8 +93,9 @@ export async function fetchCandlesFromTV(
         try {
           const json = JSON.parse(m);
           
+          // Debug server-side for easier monitoring in Vercel logs
           if (json.m === 'timescale_update') {
-            const data = json.p[1]?.s1?.s; // Python used 's1'
+            const data = json.p[1]?.s1?.s; 
             if (data && Array.isArray(data)) {
               candles = data.map(item => ({
                 datetime: new Date(item.v[0] * 1000).toISOString(),
