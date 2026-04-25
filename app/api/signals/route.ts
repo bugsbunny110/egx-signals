@@ -8,7 +8,7 @@ import type { StockSignal, SignalsResponse } from "@/types";
 export const dynamic = "force-dynamic";
 export const maxDuration = 10; // Vercel Free limit is 10s
 
-async function scanSymbol(
+export async function scanSymbol(
   symbol: string,
   name: string,
   interval: "1h" | "4h",
