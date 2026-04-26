@@ -75,12 +75,12 @@ export async function GET(req: NextRequest) {
         // ONLY Notify for LIVE signals (candlesAgo === 0)
         if (stock && stock.candlesAgo === 0) {
            if (stock.signal === "buy") {
-             alerts.push(`🟢 <b>BUY SIGNAL (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.close || "N/A"}\n\n<i>Check dashboard for TP/SL targets.</i>`);
+             alerts.push(`🟢 <b>BUY SIGNAL (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\n\n<i>Check dashboard for TP/SL targets.</i>`);
            } else if (stock.signal === "exit_long") {
-             alerts.push(`🟠 <b>EXIT BUY (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.close || "N/A"}\n\n<i>Time to secure profits!</i>`);
+             alerts.push(`🟠 <b>EXIT BUY (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\n\n<i>Time to secure profits!</i>`);
            }
         }
-      } catch (e) {
+      } catch {
         // Skip errors in background
       }
     }));
