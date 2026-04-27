@@ -28,19 +28,24 @@ export async function scanSymbol(
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
         body: JSON.stringify({
-          columns: ["Recommend.All"],
+          columns: ["Recommend.All", "change"],
           symbols: { tickers: [`EGX:${symbol}`] },
         }),
       });
       const tvData = await tvRes.json();
-      const rec = tvData?.data?.[0]?.d?.[0];
+      const rowData = tvData?.data?.[0]?.d;
+      const rec = rowData?.[0];
+      const chg = rowData?.[1];
+      
+      if (chg !== undefined) changePercent = chg;
+      
       if (rec !== undefined) {
         if (rec >= 0.5) { aiVerdict = "Strong Buy"; aiVerdictColor = "buy"; }
         else if (rec >= 0.1) { aiVerdict = "Buy"; aiVerdictColor = "buy"; }
         else if (rec <= -0.5) { aiVerdict = "Strong Sell"; aiVerdictColor = "sell"; }
         else if (rec <= -0.1) { aiVerdict = "Sell"; aiVerdictColor = "sell"; }
       }
-    } catch (e) { /* fallback to neutral */ }
+    } catch (e) { /* fallback */ }
 
     return {
       symbol,
@@ -49,6 +54,7 @@ export async function scanSymbol(
       tvSymbol,
       timeframe: interval,
       price: candles[candles.length - 1]?.close,
+      changePercent,
       aiVerdict,
       aiVerdictColor,
       signal: result.signal,

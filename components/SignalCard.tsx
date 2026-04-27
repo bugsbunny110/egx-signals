@@ -112,6 +112,18 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
               {stock.price && (
                 <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-main)", marginLeft: "4px" }}>
                   {stock.price.toFixed(2)}
+                  {stock.changePercent !== undefined && (
+                    <span 
+                      style={{ 
+                        fontSize: "10px", 
+                        marginLeft: "6px", 
+                        color: stock.changePercent >= 0 ? "var(--color-buy)" : "var(--color-sell)",
+                        fontWeight: 600
+                      }}
+                    >
+                      {stock.changePercent >= 0 ? "+" : ""}{stock.changePercent.toFixed(2)}%
+                    </span>
+                  )}
                 </span>
               )}
             </div>

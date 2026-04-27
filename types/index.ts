@@ -25,6 +25,7 @@ export interface StockSignal {
   tvSymbol?: string;
   timeframe: Timeframe;
   price?: number;
+  changePercent?: number;
   aiVerdict?: string;
   aiVerdictColor?: string;
   signal: SignalType;
