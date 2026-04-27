@@ -107,11 +107,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (e) { console.error("Batch fetch failed:", e); }
 
-  const results: StockSignal[] = [];
-  let errors = 0;
-
-  for (const { symbol, name, shortName, tvSymbol } of symbolsToScan) {
-    const tvInfo = batchData.get(symbol);
+  // PARALLEL SCAN: Run all signal engine checks in parallel to beat the 10s timeout
+  const scanPromises = symbolsToScan.flatMap((sInfo) => {
+    const tvInfo = batchData.get(sInfo.symbol);
     
     // AI Verdict logic
     let aiVerdict = "Neutral";
@@ -124,16 +122,16 @@ export async function GET(req: NextRequest) {
       else if (rec <= -0.1) { aiVerdict = "Sell"; aiVerdictColor = "sell"; }
     }
 
-    for (const interval of intervals) {
+    return intervals.map(async (interval) => {
       try {
-        const candles = await fetchCandles(symbol, "EGX", interval, 300);
+        const candles = await fetchCandles(sInfo.symbol, "EGX", interval, 300);
         const engineRes = runSignalEngine(candles);
         
-        results.push({
-          symbol,
-          name,
-          shortName,
-          tvSymbol,
+        return {
+          symbol: sInfo.symbol,
+          name: sInfo.name,
+          shortName: sInfo.shortName,
+          tvSymbol: sInfo.tvSymbol,
           timeframe: interval,
           price: candles[candles.length - 1]?.close,
           changePercent: tvInfo?.chg,
@@ -143,19 +141,21 @@ export async function GET(req: NextRequest) {
           candlesAgo: engineRes.candlesAgo,
           currentState: engineRes.currentState,
           lastUpdated: new Date().toISOString(),
-        });
+        } as StockSignal;
       } catch (err) {
-        errors++;
-        results.push({
-          symbol, name, shortName, tvSymbol, timeframe: interval,
+        return {
+          symbol: sInfo.symbol, name: sInfo.name, shortName: sInfo.shortName, 
+          tvSymbol: sInfo.tvSymbol, timeframe: interval,
           signal: "none", candlesAgo: null, currentState: 0,
           lastUpdated: new Date().toISOString(),
           error: (err as Error).message,
-        });
+        } as StockSignal;
       }
-      // Small delay still needed for Twelve Data if used, but fetchCandles is local now
-    }
-  }
+    });
+  });
+
+  const results = await Promise.all(scanPromises);
+  const errors = results.filter(r => r.error).length;
 
   const response: SignalsResponse = {
     stocks: results,
