@@ -23,6 +23,7 @@ export async function scanSymbol(
     // Fetch recommendation for verdict
     let aiVerdict = "Neutral";
     let aiVerdictColor = "neutral";
+    let changePercent: number | undefined = undefined;
     try {
       const tvRes = await fetch("https://scanner.tradingview.com/egypt/scan", {
         method: "POST",
