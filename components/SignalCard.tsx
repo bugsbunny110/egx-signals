@@ -109,30 +109,39 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
               >
                 {stock.timeframe === "1h" ? "H1" : "H4"}
               </span>
-              {recent && stock.signal !== "none" && (
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: config.colorVar,
-                    display: "inline-block",
-                    boxShadow: `0 0 6px ${config.colorVar}`,
-                    flexShrink: 0,
-                  }}
-                />
+              {stock.price && (
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-main)", marginLeft: "4px" }}>
+                  {stock.price.toFixed(2)}
+                </span>
               )}
             </div>
             <div
               style={{
-                fontSize: "12px",
-                color: "var(--text-muted)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
               }}
             >
-              {stock.name}
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "var(--text-muted)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "100px"
+                }}
+              >
+                {stock.name}
+              </div>
+              {stock.aiVerdict && (
+                <span 
+                  className={`badge badge-${stock.aiVerdictColor || 'none'}`}
+                  style={{ fontSize: "10px", padding: "1px 6px", textTransform: "uppercase" }}
+                >
+                  {stock.aiVerdict}
+                </span>
+              )}
             </div>
           </div>
 

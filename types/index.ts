@@ -24,6 +24,9 @@ export interface StockSignal {
   shortName?: string;
   tvSymbol?: string;
   timeframe: Timeframe;
+  price?: number;
+  aiVerdict?: string;
+  aiVerdictColor?: string;
   signal: SignalType;
   candlesAgo: number | null;
   currentState: number;

@@ -19,6 +19,28 @@ export async function scanSymbol(
     // fetchCandles now talks to local TradingView data server
     const candles = await fetchCandles(symbol, "EGX", interval, 300);
     const result = runSignalEngine(candles);
+    
+    // Fetch recommendation for verdict
+    let aiVerdict = "Neutral";
+    let aiVerdictColor = "neutral";
+    try {
+      const tvRes = await fetch("https://scanner.tradingview.com/egypt/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+        body: JSON.stringify({
+          columns: ["Recommend.All"],
+          symbols: { tickers: [`EGX:${symbol}`] },
+        }),
+      });
+      const tvData = await tvRes.json();
+      const rec = tvData?.data?.[0]?.d?.[0];
+      if (rec !== undefined) {
+        if (rec >= 0.5) { aiVerdict = "Strong Buy"; aiVerdictColor = "buy"; }
+        else if (rec >= 0.1) { aiVerdict = "Buy"; aiVerdictColor = "buy"; }
+        else if (rec <= -0.5) { aiVerdict = "Strong Sell"; aiVerdictColor = "sell"; }
+        else if (rec <= -0.1) { aiVerdict = "Sell"; aiVerdictColor = "sell"; }
+      }
+    } catch (e) { /* fallback to neutral */ }
 
     return {
       symbol,
@@ -26,6 +48,9 @@ export async function scanSymbol(
       shortName,
       tvSymbol,
       timeframe: interval,
+      price: candles[candles.length - 1]?.close,
+      aiVerdict,
+      aiVerdictColor,
       signal: result.signal,
       candlesAgo: result.candlesAgo,
       currentState: result.currentState,

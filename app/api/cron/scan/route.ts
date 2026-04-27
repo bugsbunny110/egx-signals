@@ -74,10 +74,13 @@ export async function GET(req: NextRequest) {
 
         // ONLY Notify for LIVE signals (candlesAgo === 0)
         if (stock && stock.candlesAgo === 0) {
+           const verdict = stock.aiVerdict ? ` [${stock.aiVerdict.toUpperCase()}]` : "";
+           const emoji = stock.aiVerdictColor === "buy" ? "🔥" : "🟢";
+           
            if (stock.signal === "buy") {
-             alerts.push(`🟢 <b>BUY SIGNAL (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.close || "N/A"}\n\n<i>Check dashboard for TP/SL targets.</i>`);
+             alerts.push(`${emoji} <b>BUY SIGNAL (LIVE)</b>${verdict}\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.price?.toFixed(2) || "N/A"}\n\n<i>Check dashboard for TP/SL targets.</i>`);
            } else if (stock.signal === "exit_long") {
-             alerts.push(`🟠 <b>EXIT BUY (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.close || "N/A"}\n\n<i>Time to secure profits!</i>`);
+             alerts.push(`🟠 <b>EXIT BUY (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.price?.toFixed(2) || "N/A"}\n\n<i>Time to secure profits!</i>`);
            }
         }
       } catch (e) {
