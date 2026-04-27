@@ -38,6 +38,7 @@ export interface StockSignal {
   marketCap?: number | null;
   ldDebtEquity?: number | null;
   totalDebtEquity?: number | null;
+  yesterdayChangePercent?: number | null;
 }
 
 export interface EGXSymbol {

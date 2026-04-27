@@ -276,8 +276,8 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
           </div>
         )}
 
-        {/* State indicator bar */}
-        {stock.currentState !== 0 && !stock.error && (
+        {/* Yesterday's Change */}
+        {!stock.error && (
           <div
             style={{
               marginTop: "12px",
@@ -285,35 +285,22 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
               borderTop: "1px solid var(--bg-border)",
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              justifyContent: "space-between",
               fontSize: "11px",
               color: "var(--text-muted)",
             }}
           >
+            <span>Yesterday's Change:</span>
             <span
               style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background:
-                  stock.currentState === 1
-                    ? "var(--color-buy)"
-                    : "var(--color-sell)",
-                display: "inline-block",
-                flexShrink: 0,
-              }}
-            />
-            Current state:{" "}
-            <span
-              style={{
-                color:
-                  stock.currentState === 1
-                    ? "var(--color-buy)"
-                    : "var(--color-sell)",
-                fontWeight: 600,
+                color: (stock.yesterdayChangePercent ?? 0) >= 0 ? "var(--color-buy)" : "var(--color-sell)",
+                fontWeight: 700,
+                fontFamily: "JetBrains Mono, monospace"
               }}
             >
-              {stock.currentState === 1 ? "Long" : "Short"}
+              {stock.yesterdayChangePercent !== undefined && stock.yesterdayChangePercent !== null 
+                ? `${stock.yesterdayChangePercent >= 0 ? "+" : ""}${stock.yesterdayChangePercent.toFixed(2)}%`
+                : "N/A"}
             </span>
           </div>
         )}

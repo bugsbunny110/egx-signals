@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     : EGX_SYMBOLS;
 
   // BATCH FETCH: Get ALL recommendations and change % in one go
-  const batchData = new Map<string, { rec: number, chg: number }>();
+  const batchData = new Map<string, { rec: number, chg: number, yChg?: number | null }>();
   let rawTvData = null;
   try {
     const tvRes = await fetch("https://scanner.tradingview.com/egypt/scan", {
@@ -109,7 +109,10 @@ export async function GET(req: NextRequest) {
       let ticker = row.s.split(':')[1];
       if (ticker.includes('.')) ticker = ticker.split('.')[0]; 
       
-      batchData.set(ticker, { rec: row.d[0], chg: row.d[1] });
+      batchData.set(ticker, { 
+        rec: row.d[0], 
+        chg: row.d[1]
+      });
     });
   } catch (e) { console.error("Batch fetch failed:", e); }
 
@@ -134,6 +137,34 @@ export async function GET(req: NextRequest) {
       try {
         const candles = await fetchCandles(symbol, "EGX", interval, 300);
         const engineRes = runSignalEngine(candles);
+
+        // Calculate Yesterday's Change % from the candles
+        // We look for the last candle of the day before today
+        let yesterdayChange = null;
+        if (candles.length > 20) {
+          const days: { date: string, close: number }[] = [];
+          let lastDate = "";
+          for (let i = 0; i < candles.length; i++) {
+            const date = candles[i].datetime.split(' ')[0];
+            if (date !== lastDate) {
+              if (i > 0) {
+                days.push({ date: lastDate, close: candles[i-1].close });
+              }
+              lastDate = date;
+            }
+          }
+          // Add the very last candle's day (today)
+          days.push({ date: lastDate, close: candles[candles.length - 1].close });
+
+          if (days.length >= 3) {
+            // days[last] is today
+            // days[last-1] is yesterday's close
+            // days[last-2] is day-before-yesterday's close
+            const yesterdayClose = days[days.length - 2].close;
+            const prevDayClose = days[days.length - 3].close;
+            yesterdayChange = ((yesterdayClose - prevDayClose) / prevDayClose) * 100;
+          }
+        }
         
         results.push({
           symbol,
@@ -142,7 +173,8 @@ export async function GET(req: NextRequest) {
           tvSymbol,
           timeframe: interval,
           price: candles[candles.length - 1]?.close,
-          changePercent: tvInfo?.chg ?? 0, // Fallback to 0 if missing but matched
+          changePercent: tvInfo?.chg ?? 0, 
+          yesterdayChangePercent: yesterdayChange,
           aiVerdict,
           aiVerdictColor,
           signal: engineRes.signal,
