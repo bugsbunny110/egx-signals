@@ -52,6 +52,7 @@ export interface SignalsResponse {
   scannedAt: string;
   totalScanned: number;
   errors: number;
+  debug?: any;
 }
 
 export interface DashboardStats {

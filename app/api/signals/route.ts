@@ -162,6 +162,12 @@ export async function GET(req: NextRequest) {
     scannedAt: new Date().toISOString(),
     totalScanned: results.length,
     errors,
+    debug: {
+      batchSize: batchData.size,
+      tickers: Array.from(batchData.keys()).slice(0, 10),
+      foundForSymbol: batchData.has(symbolsToScan[0]?.symbol),
+      rawInfoForFirst: batchData.get(symbolsToScan[0]?.symbol),
+    }
   };
 
   return NextResponse.json(response, {
