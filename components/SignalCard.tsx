@@ -81,7 +81,6 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
       tabIndex={0}
       id={`card-${stock.symbol}-${stock.timeframe}`}
       aria-label={`${stock.symbol} ${stock.timeframe} ${config.label} signal`}
-      onKeyDown={(e) => e.key === "Enter" && onViewChart(stock)}
     >
       <div style={{ padding: "18px 20px" }}>
         {/* Top row: ticker + timeframe badge */}
@@ -110,21 +109,11 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
                 {stock.timeframe === "1h" ? "H1" : "H4"}
               </span>
               {stock.price && (
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-main)", marginLeft: "4px" }}>
-                  {stock.price.toFixed(2)}
-                  {stock.changePercent !== undefined && stock.changePercent !== null && (
-                    <span 
-                      style={{ 
-                        fontSize: "10px", 
-                        marginLeft: "6px", 
-                        color: stock.changePercent >= 0 ? "var(--color-buy)" : "var(--color-sell)",
-                        fontWeight: 600
-                      }}
-                    >
-                      {stock.changePercent >= 0 ? "+" : ""}{stock.changePercent.toFixed(2)}%
-                    </span>
-                  )}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "4px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
+                    {stock.price.toFixed(2)}
+                  </span>
+                </div>
               )}
             </div>
             <div
@@ -146,22 +135,24 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
               >
                 {stock.name}
               </div>
-              {stock.aiVerdict && (
-                <span 
-                  className={`badge badge-${stock.aiVerdictColor || 'none'}`}
-                  style={{ fontSize: "10px", padding: "1px 6px", textTransform: "uppercase" }}
-                >
-                  {stock.aiVerdict}
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Signal badge */}
-          <span className={`badge ${config.badgeClass}`} style={{ flexShrink: 0 }}>
-            {config.icon}
-            {config.label}
-          </span>
+          {/* Right Column: Signal badge + AI Verdict */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", flexShrink: 0 }}>
+            <span className={`badge ${config.badgeClass}`}>
+              {config.icon}
+              {config.label}
+            </span>
+            {stock.aiVerdict && (
+              <span 
+                className={`badge badge-${stock.aiVerdictColor || 'none'}`}
+                style={{ fontSize: "10px", padding: "1px 6px", textTransform: "uppercase" }}
+              >
+                {stock.aiVerdict}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Candles ago display */}
@@ -230,23 +221,30 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
             )}
           </div>
 
-          {/* View chart button */}
-          <button
-            className="btn-chart"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewChart(stock);
-            }}
-            id={`chart-btn-${stock.symbol}-${stock.timeframe}`}
-            aria-label={`View TradingView chart for ${stock.symbol}`}
-          >
-            <BarChart2 size={13} />
-            Chart
-          </button>
+          {/* Today Change Badge (Repositioned) */}
+          {stock.changePercent !== undefined && stock.changePercent !== null && !stock.error && (
+            <div 
+              style={{ 
+                fontSize: "12px", 
+                padding: "4px 10px", 
+                borderRadius: "6px",
+                background: stock.changePercent >= 0 ? "rgba(0, 214, 143, 0.15)" : "rgba(255, 77, 109, 0.15)",
+                color: stock.changePercent >= 0 ? "var(--color-buy)" : "var(--color-sell)",
+                fontWeight: 800,
+                border: `1px solid ${stock.changePercent >= 0 ? "rgba(0, 214, 143, 0.3)" : "rgba(255, 77, 109, 0.3)"}`,
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                fontFamily: "JetBrains Mono, monospace"
+              }}
+            >
+              {stock.changePercent >= 0 ? "▲" : "▼"} {Math.abs(stock.changePercent).toFixed(2)}%
+            </div>
+          )}
         </div>
 
-        {/* Fundamental Data Section (Buy signals only) */}
-        {stock.signal === "buy" && !stock.error && (
+        {/* Stats Section (Visible for all) */}
+        {!stock.error && (
           <div
              style={{
                marginTop: "16px",
@@ -259,7 +257,8 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
                gap: "10px",
              }}
           >
-            {/* P/E Ratio */}
+
+            {/* P/E Ratio (Always visible) */}
             <div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "2px" }}>P/E Ratio</div>
               <div style={{ fontSize: "13px", fontWeight: 700, color: (stock.pe ?? 0) > 0 ? "var(--color-buy)" : "var(--color-sell)" }}>
@@ -267,27 +266,31 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
               </div>
             </div>
 
-            {/* Market Cap */}
+            {/* Market Cap (Always visible) */}
             <div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "2px" }}>Market Cap</div>
               <div style={{ fontSize: "13px", fontWeight: 700, color: (stock.marketCap ?? 0) > 1_000_000_000 ? "var(--color-buy)" : "var(--color-sell)" }}>
-                {stock.marketCap !== undefined && stock.marketCap !== null ? (stock.marketCap / 1_000_000_000).toFixed(1) + "B" : "N/A"}
+                {stock.marketCap !== undefined && stock.marketCap !== null 
+                  ? (stock.marketCap / 1_000_000_000).toFixed(1) + "B" 
+                  : "N/A"}
               </div>
             </div>
 
-            {/* LD Debt to Equity */}
+            {/* Debt/Equity (Always visible) */}
             <div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "2px" }}>LD D/E MRQ</div>
               <div style={{ fontSize: "13px", fontWeight: 700, color: (stock.ldDebtEquity ?? 0) < 0.7 ? "var(--color-buy)" : "var(--color-sell)" }}>
-                {stock.ldDebtEquity !== undefined && stock.ldDebtEquity !== null ? (stock.ldDebtEquity * 100).toFixed(1) + "%" : "N/A"}
+                {stock.ldDebtEquity !== undefined && stock.ldDebtEquity !== null 
+                  ? (stock.ldDebtEquity * 100).toFixed(1) + "%" 
+                  : "N/A"}
               </div>
             </div>
-
-            {/* Total Debt to Equity */}
             <div>
               <div style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "2px" }}>Total D/E MRQ</div>
               <div style={{ fontSize: "13px", fontWeight: 700, color: (stock.totalDebtEquity ?? 0) < 0.7 ? "var(--color-buy)" : "var(--color-sell)" }}>
-                {stock.totalDebtEquity !== undefined && stock.totalDebtEquity !== null ? (stock.totalDebtEquity * 100).toFixed(1) + "%" : "N/A"}
+                {stock.totalDebtEquity !== undefined && stock.totalDebtEquity !== null 
+                  ? (stock.totalDebtEquity * 100).toFixed(1) + "%" 
+                  : "N/A"}
               </div>
             </div>
           </div>

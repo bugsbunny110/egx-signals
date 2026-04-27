@@ -167,13 +167,20 @@ export async function fetchAllFundamentalsFromTV(): Promise<Record<string, any>>
         const fundamentals: Record<string, any> = {};
         
         for (const item of data?.data || []) {
-            const symbol = item.s.split(':').pop();
-            fundamentals[symbol] = {
-                pe: item.d[1],
-                market_cap: item.d[2],
-                debt_to_equity: item.d[3],
-                ld_debt_to_equity: item.d[4]
-            };
+            let symbol = item.s.split(':').pop();
+            // Handle symbols like "COMI.CA" by stripping the suffix
+            if (symbol && symbol.includes('.')) {
+                symbol = symbol.split('.')[0];
+            }
+            
+            if (symbol) {
+                fundamentals[symbol] = {
+                    pe: item.d[1],
+                    market_cap: item.d[2],
+                    debt_to_equity: item.d[3],
+                    ld_debt_to_equity: item.d[4]
+                };
+            }
         }
         return fundamentals;
     } catch (e) {

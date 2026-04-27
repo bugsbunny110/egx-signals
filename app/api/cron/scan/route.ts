@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
            const chgStr = stock.changePercent !== undefined ? ` (${stock.changePercent >= 0 ? "+" : ""}${stock.changePercent.toFixed(2)}%)` : "";
            
            if (stock.signal === "buy") {
-             alerts.push(`${emoji} <b>BUY SIGNAL (LIVE)</b>${verdict}\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.price?.toFixed(2) || "N/A"}${chgStr}\n\n<i>Check dashboard for TP/SL targets.</i>`);
+             alerts.push(`🟢 <b>BUY SIGNAL (LIVE)</b>${verdict}\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.price?.toFixed(2) || "N/A"}${chgStr}\n\n<i>Check dashboard for TP/SL targets.</i>`);
            } else if (stock.signal === "exit_long") {
              alerts.push(`🟠 <b>EXIT BUY (LIVE)</b>\nStock: <b>${symCode}</b>\nTimeframe: H1\nPrice: ${stock.price?.toFixed(2) || "N/A"}${chgStr}\n\n<i>Time to secure profits!</i>`);
            }

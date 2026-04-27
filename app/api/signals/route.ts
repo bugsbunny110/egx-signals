@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const symbolFilter = searchParams.get("symbol");
   const intervalFilter = searchParams.get("interval") as "1h" | "4h" | null;
+  const debug = searchParams.get("debug") === "true";
 
   const intervals: ("1h" | "4h")[] = intervalFilter ? [intervalFilter] : ["1h", "4h"];
   const symbolsToScan = symbolFilter
@@ -91,6 +92,7 @@ export async function GET(req: NextRequest) {
 
   // BATCH FETCH: Get ALL recommendations and change % in one go
   const batchData = new Map<string, { rec: number, chg: number }>();
+  let rawTvData = null;
   try {
     const tvRes = await fetch("https://scanner.tradingview.com/egypt/scan", {
       method: "POST",
@@ -101,20 +103,26 @@ export async function GET(req: NextRequest) {
       }),
     });
     const tvData = await tvRes.json();
+    rawTvData = tvData;
     tvData?.data?.forEach((row: any) => {
-      const ticker = row.s.split(':')[1];
+      // Handle symbols like "EGX:COMI" or "EGX:COMI.CA"
+      let ticker = row.s.split(':')[1];
+      if (ticker.includes('.')) ticker = ticker.split('.')[0]; 
+      
       batchData.set(ticker, { rec: row.d[0], chg: row.d[1] });
     });
   } catch (e) { console.error("Batch fetch failed:", e); }
 
-  // PARALLEL SCAN: Run all signal engine checks in parallel to beat the 10s timeout
-  const scanPromises = symbolsToScan.flatMap((sInfo) => {
-    const tvInfo = batchData.get(sInfo.symbol);
+  const results: StockSignal[] = [];
+  let errors = 0;
+
+  for (const { symbol, name, shortName, tvSymbol } of symbolsToScan) {
+    const tvInfo = batchData.get(symbol);
     
     // AI Verdict logic
     let aiVerdict = "Neutral";
     let aiVerdictColor = "neutral";
-    if (tvInfo && tvInfo.rec !== undefined) {
+    if (tvInfo && tvInfo.rec !== undefined && tvInfo.rec !== null) {
       const rec = tvInfo.rec;
       if (rec >= 0.5) { aiVerdict = "Strong Buy"; aiVerdictColor = "buy"; }
       else if (rec >= 0.1) { aiVerdict = "Buy"; aiVerdictColor = "buy"; }
@@ -122,53 +130,51 @@ export async function GET(req: NextRequest) {
       else if (rec <= -0.1) { aiVerdict = "Sell"; aiVerdictColor = "sell"; }
     }
 
-    return intervals.map(async (interval) => {
+    for (const interval of intervals) {
       try {
-        const candles = await fetchCandles(sInfo.symbol, "EGX", interval, 300);
+        const candles = await fetchCandles(symbol, "EGX", interval, 300);
         const engineRes = runSignalEngine(candles);
         
-        return {
-          symbol: sInfo.symbol,
-          name: sInfo.name,
-          shortName: sInfo.shortName,
-          tvSymbol: sInfo.tvSymbol,
+        results.push({
+          symbol,
+          name,
+          shortName,
+          tvSymbol,
           timeframe: interval,
           price: candles[candles.length - 1]?.close,
-          changePercent: tvInfo?.chg,
+          changePercent: tvInfo?.chg ?? 0, // Fallback to 0 if missing but matched
           aiVerdict,
           aiVerdictColor,
           signal: engineRes.signal,
           candlesAgo: engineRes.candlesAgo,
           currentState: engineRes.currentState,
           lastUpdated: new Date().toISOString(),
-        } as StockSignal;
+        });
       } catch (err) {
-        return {
-          symbol: sInfo.symbol, name: sInfo.name, shortName: sInfo.shortName, 
-          tvSymbol: sInfo.tvSymbol, timeframe: interval,
+        errors++;
+        results.push({
+          symbol, name, shortName, tvSymbol, timeframe: interval,
           signal: "none", candlesAgo: null, currentState: 0,
           lastUpdated: new Date().toISOString(),
           error: (err as Error).message,
-        } as StockSignal;
+        });
       }
-    });
-  });
+    }
+  }
 
-  const results = await Promise.all(scanPromises);
-  const errors = results.filter(r => r.error).length;
-
-  const response: SignalsResponse = {
+  const response: any = {
     stocks: results,
     scannedAt: new Date().toISOString(),
     totalScanned: results.length,
     errors,
-    debug: {
-      batchSize: batchData.size,
-      tickers: Array.from(batchData.keys()).slice(0, 10),
-      foundForSymbol: batchData.has(symbolsToScan[0]?.symbol),
-      rawInfoForFirst: batchData.get(symbolsToScan[0]?.symbol),
-    }
   };
+
+  if (debug) {
+    response.debug = {
+      tvCount: rawTvData?.totalCount,
+      mappedSymbols: Array.from(batchData.keys()),
+    };
+  }
 
   return NextResponse.json(response, {
     headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30" },
