@@ -81,40 +81,90 @@ export async function scanSymbol(
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const symbolFilter = searchParams.get("symbol"); // optional single symbol
+  const symbolFilter = searchParams.get("symbol");
   const intervalFilter = searchParams.get("interval") as "1h" | "4h" | null;
 
-  const intervals: ("1h" | "4h")[] = intervalFilter
-    ? [intervalFilter]
-    : ["1h", "4h"];
-
+  const intervals: ("1h" | "4h")[] = intervalFilter ? [intervalFilter] : ["1h", "4h"];
   const symbolsToScan = symbolFilter
     ? EGX_SYMBOLS.filter((s) => s.symbol === symbolFilter)
     : EGX_SYMBOLS;
+
+  // BATCH FETCH: Get ALL recommendations and change % in one go
+  const batchData = new Map<string, { rec: number, chg: number }>();
+  try {
+    const tvRes = await fetch("https://scanner.tradingview.com/egypt/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+      body: JSON.stringify({
+        columns: ["Recommend.All", "change"],
+        symbols: { tickers: symbolsToScan.map(s => `EGX:${s.symbol}`) },
+      }),
+    });
+    const tvData = await tvRes.json();
+    tvData?.data?.forEach((row: any) => {
+      const ticker = row.s.split(':')[1];
+      batchData.set(ticker, { rec: row.d[0], chg: row.d[1] });
+    });
+  } catch (e) { console.error("Batch fetch failed:", e); }
 
   const results: StockSignal[] = [];
   let errors = 0;
 
   for (const { symbol, name, shortName, tvSymbol } of symbolsToScan) {
+    const tvInfo = batchData.get(symbol);
+    
+    // AI Verdict logic
+    let aiVerdict = "Neutral";
+    let aiVerdictColor = "neutral";
+    if (tvInfo && tvInfo.rec !== undefined) {
+      const rec = tvInfo.rec;
+      if (rec >= 0.5) { aiVerdict = "Strong Buy"; aiVerdictColor = "buy"; }
+      else if (rec >= 0.1) { aiVerdict = "Buy"; aiVerdictColor = "buy"; }
+      else if (rec <= -0.5) { aiVerdict = "Strong Sell"; aiVerdictColor = "sell"; }
+      else if (rec <= -0.1) { aiVerdict = "Sell"; aiVerdictColor = "sell"; }
+    }
+
     for (const interval of intervals) {
-      const result = await scanSymbol(symbol, name, interval, shortName, tvSymbol);
-      results.push(result);
-      if (result.error) errors++;
-      // Small delay between WebSocket sessions to prevent overloading
-      await new Promise((r) => setTimeout(r, 500));
+      try {
+        const candles = await fetchCandles(symbol, "EGX", interval, 300);
+        const engineRes = runSignalEngine(candles);
+        
+        results.push({
+          symbol,
+          name,
+          shortName,
+          tvSymbol,
+          timeframe: interval,
+          price: candles[candles.length - 1]?.close,
+          changePercent: tvInfo?.chg,
+          aiVerdict,
+          aiVerdictColor,
+          signal: engineRes.signal,
+          candlesAgo: engineRes.candlesAgo,
+          currentState: engineRes.currentState,
+          lastUpdated: new Date().toISOString(),
+        });
+      } catch (err) {
+        errors++;
+        results.push({
+          symbol, name, shortName, tvSymbol, timeframe: interval,
+          signal: "none", candlesAgo: null, currentState: 0,
+          lastUpdated: new Date().toISOString(),
+          error: (err as Error).message,
+        });
+      }
+      // Small delay still needed for Twelve Data if used, but fetchCandles is local now
     }
   }
 
   const response: SignalsResponse = {
     stocks: results,
     scannedAt: new Date().toISOString(),
-    totalScanned: symbolsToScan.length * intervals.length,
+    totalScanned: results.length,
     errors,
   };
 
   return NextResponse.json(response, {
-    headers: {
-      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
-    },
+    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30" },
   });
 }
