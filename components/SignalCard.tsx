@@ -84,70 +84,50 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
     >
       <div style={{ padding: "18px 20px" }}>
         {/* Top row: ticker + timeframe badge */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: "14px",
-            gap: "8px",
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "4px",
-              }}
-            >
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "14px" }}>
+          {/* Top Row: Symbol/Price and Main Signal Badge */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
               <span className="ticker-tag">{stock.shortName || stock.symbol.slice(0, 8)}</span>
-              <span
-                className={`badge ${stock.timeframe === "1h" ? "badge-h1" : "badge-h4"}`}
-              >
+              <span className={`badge ${stock.timeframe === "1h" ? "badge-h1" : "badge-h4"}`}>
                 {stock.timeframe === "1h" ? "H1" : "H4"}
               </span>
               {stock.price && (
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "4px" }}>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)" }}>
-                    {stock.price.toFixed(2)}
-                  </span>
-                </div>
+                <span style={{ fontSize: "14px", fontWeight: 800, color: "var(--text-primary)", marginLeft: "4px" }}>
+                  {stock.price.toFixed(2)}
+                </span>
               )}
             </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "var(--text-muted)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "100px"
-                }}
-              >
-                {stock.name}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Signal badge + AI Verdict */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", flexShrink: 0 }}>
-            <span className={`badge ${config.badgeClass}`}>
+            <span className={`badge ${config.badgeClass}`} style={{ flexShrink: 0 }}>
               {config.icon}
               {config.label}
             </span>
+          </div>
+
+          {/* Bottom Row: Stock Name and AI Verdict */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+            <div
+              style={{
+                fontSize: "12px",
+                color: "var(--text-muted)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                minWidth: 0,
+                flex: 1
+              }}
+            >
+              {stock.name}
+            </div>
             {stock.aiVerdict && (
               <span 
                 className={`badge badge-${stock.aiVerdictColor || 'none'}`}
-                style={{ fontSize: "10px", padding: "1px 6px", textTransform: "uppercase" }}
+                style={{ 
+                  fontSize: "10px", 
+                  padding: "1px 6px", 
+                  textTransform: "uppercase",
+                  flexShrink: 0 
+                }}
               >
                 {stock.aiVerdict}
               </span>
