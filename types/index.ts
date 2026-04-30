@@ -1,6 +1,6 @@
 export type SignalType = "buy" | "sell" | "exit_long" | "exit_short" | "none";
 
-export type Timeframe = "1h" | "4h";
+export type Timeframe = "1h" | "4h" | "30";
 
 export interface OHLCVCandle {
   datetime: string;
@@ -39,6 +39,8 @@ export interface StockSignal {
   ldDebtEquity?: number | null;
   totalDebtEquity?: number | null;
   yesterdayChangePercent?: number | null;
+  gapPercent?: number | null;
+  relativeVolume30m?: number | null;
 }
 
 export interface EGXSymbol {

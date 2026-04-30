@@ -8,7 +8,7 @@ const CACHE_TTL_MS = 60 * 1000; // 1 minute (allows fresh intra-candle data)
 export async function fetchCandles(
   symbol: string,
   exchange: string,
-  interval: "1h" | "4h",
+  interval: "1h" | "4h" | "30",
   bars = 300
 ): Promise<OHLCVCandle[]> {
   const cacheKey = `${exchange}:${symbol}:${interval}`;

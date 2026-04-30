@@ -11,7 +11,7 @@ export const maxDuration = 10; // Vercel Free limit is 10s
 export async function scanSymbol(
   symbol: string,
   name: string,
-  interval: "1h" | "4h",
+  interval: "1h" | "4h" | "30",
   shortName?: string,
   tvSymbol?: string
 ): Promise<StockSignal> {
@@ -135,34 +135,81 @@ export async function GET(req: NextRequest) {
 
     for (const interval of intervals) {
       try {
-        const candles = await fetchCandles(symbol, "EGX", interval, 300);
+        // Parallel fetch for main candles and 30m candles for RVOL
+        const [candles, candles30m] = await Promise.all([
+          fetchCandles(symbol, "EGX", interval, 300),
+          fetchCandles(symbol, "EGX", "30", 120) // ~12-14 trading days
+        ]);
+        
         const engineRes = runSignalEngine(candles);
 
-        // Calculate Yesterday's Change % from the candles
-        // We look for the last candle of the day before today
-        let yesterdayChange = null;
-        if (candles.length > 20) {
-          const days: { date: string, close: number }[] = [];
-          let lastDate = "";
-          for (let i = 0; i < candles.length; i++) {
-            const date = candles[i].datetime.split(' ')[0];
-            if (date !== lastDate) {
-              if (i > 0) {
-                days.push({ date: lastDate, close: candles[i-1].close });
+        // Calculate Relative Volume for first 30 mins (10:00 - 10:30 Cairo / 07:00 UTC)
+        let relativeVolume30m = null;
+        if (candles30m.length > 20) {
+          const openingVolumes: { date: string, volume: number }[] = [];
+          const daysFound = new Set<string>();
+          
+          // Group 30m candles by day
+          for (let i = 0; i < candles30m.length; i++) {
+            const date = candles30m[i].datetime.substring(0, 10);
+            const time = candles30m[i].datetime.substring(11, 16); // "HH:mm" in UTC
+            
+            if (!daysFound.has(date)) {
+              daysFound.add(date);
+              // Strictly check for the opening candle (07:00 UTC = 10:00 AM Cairo)
+              if (time === "07:00") {
+                openingVolumes.push({ date, volume: candles30m[i].volume });
+              } else {
+                // If first candle is later than 07:00, it means 0 volume in the first 30m
+                openingVolumes.push({ date, volume: 0 });
               }
-              lastDate = date;
             }
           }
-          // Add the very last candle's day (today)
-          days.push({ date: lastDate, close: candles[candles.length - 1].close });
+          
+          if (openingVolumes.length >= 2) {
+            const todayStat = openingVolumes[openingVolumes.length - 1];
+            const previousStats = openingVolumes.slice(0, -1).slice(-10); // Last 10 days
+            
+            if (previousStats.length > 0) {
+              const avgPrevVol = previousStats.reduce((a, b) => a + b.volume, 0) / previousStats.length;
+              // If today's opening candle (07:00) wasn't found in the loop above, todayStat.volume will be 0
+              relativeVolume30m = avgPrevVol > 0 ? todayStat.volume / avgPrevVol : 0;
+            }
+          }
+        }
 
-          if (days.length >= 3) {
-            // days[last] is today
-            // days[last-1] is yesterday's close
-            // days[last-2] is day-before-yesterday's close
-            const yesterdayClose = days[days.length - 2].close;
-            const prevDayClose = days[days.length - 3].close;
+        // Calculate Yesterday's Change % and Today's Gap % from the candles
+        let yesterdayChange = null;
+        let gapPercent = null;
+        
+        if (candles.length > 20) {
+          const dayStats: { date: string, open: number, close: number }[] = [];
+          let currentDay: { date: string, open: number, close: number } | null = null;
+
+          for (let i = 0; i < candles.length; i++) {
+            const date = candles[i].datetime.substring(0, 10);
+            if (!currentDay || date !== currentDay.date) {
+              if (currentDay) dayStats.push(currentDay);
+              currentDay = { date, open: candles[i].open, close: candles[i].close };
+            } else {
+              currentDay.close = candles[i].close;
+            }
+          }
+          if (currentDay) dayStats.push(currentDay);
+
+          if (dayStats.length >= 3) {
+            // dayStats[last] is today
+            // dayStats[last-1] is yesterday
+            // dayStats[last-2] is day-before-yesterday
+            
+            // Yesterday's Change: (Yesterday Close - PrevDay Close) / PrevDay Close
+            const yesterdayClose = dayStats[dayStats.length - 2].close;
+            const prevDayClose = dayStats[dayStats.length - 3].close;
             yesterdayChange = ((yesterdayClose - prevDayClose) / prevDayClose) * 100;
+
+            // Today's Gap: (Today Open - Yesterday Close) / Yesterday Close
+            const todayOpen = dayStats[dayStats.length - 1].open;
+            gapPercent = ((todayOpen - yesterdayClose) / yesterdayClose) * 100;
           }
         }
         
@@ -175,6 +222,8 @@ export async function GET(req: NextRequest) {
           price: candles[candles.length - 1]?.close,
           changePercent: tvInfo?.chg ?? 0, 
           yesterdayChangePercent: yesterdayChange,
+          gapPercent: gapPercent,
+          relativeVolume30m: relativeVolume30m,
           aiVerdict,
           aiVerdictColor,
           signal: engineRes.signal,

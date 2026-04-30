@@ -284,24 +284,36 @@ export function SignalCard({ stock, index, onViewChart, onAnalysis }: SignalCard
               paddingTop: "12px",
               borderTop: "1px solid var(--bg-border)",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              fontSize: "11px",
-              color: "var(--text-muted)",
+              flexDirection: "column",
+              gap: "8px"
             }}
           >
-            <span>Yesterday's Change:</span>
-            <span
-              style={{
-                color: (stock.yesterdayChangePercent ?? 0) >= 0 ? "var(--color-buy)" : "var(--color-sell)",
-                fontWeight: 700,
-                fontFamily: "JetBrains Mono, monospace"
-              }}
-            >
-              {stock.yesterdayChangePercent !== undefined && stock.yesterdayChangePercent !== null 
-                ? `${stock.yesterdayChangePercent >= 0 ? "+" : ""}${stock.yesterdayChangePercent.toFixed(2)}%`
-                : "N/A"}
-            </span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--text-muted)" }}>
+              <span>Yesterday's Change:</span>
+              <span style={{ color: (stock.yesterdayChangePercent ?? 0) >= 0 ? "var(--color-buy)" : "var(--color-sell)", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
+                {stock.yesterdayChangePercent !== undefined && stock.yesterdayChangePercent !== null 
+                  ? `${stock.yesterdayChangePercent >= 0 ? "+" : ""}${stock.yesterdayChangePercent.toFixed(2)}%`
+                  : "N/A"}
+              </span>
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--text-muted)" }}>
+              <span>Today's Gap:</span>
+              <span style={{ color: (stock.gapPercent ?? 0) >= 0 ? "var(--color-buy)" : "var(--color-sell)", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
+                {stock.gapPercent !== undefined && stock.gapPercent !== null 
+                  ? `${stock.gapPercent >= 0 ? "+" : ""}${stock.gapPercent.toFixed(2)}%`
+                  : "N/A"}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--text-muted)" }}>
+              <span>Opening RVOL (30m):</span>
+              <span style={{ color: (stock.relativeVolume30m ?? 0) >= 1.2 ? "var(--color-buy)" : "var(--text-muted)", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>
+                {stock.relativeVolume30m !== undefined && stock.relativeVolume30m !== null 
+                  ? `${stock.relativeVolume30m.toFixed(2)}x`
+                  : "N/A"}
+              </span>
+            </div>
           </div>
         )}
       </div>
