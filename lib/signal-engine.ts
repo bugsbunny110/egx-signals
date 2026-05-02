@@ -1,82 +1,145 @@
 /**
- * Universal Self-Adaptive EMA - Pro Edition
- * TypeScript port of the Pine Script indicator
- *
- * Pine Script logic:
- * - EMA(close, 10)
- * - deltaEMA = EMA - EMA[1]
- * - Z-Score engine: lookback=150, avgDelta=SMA(deltaEMA,150), stdDev(deltaEMA,150)
- * - zScore = (deltaEMA - avgDelta) / stdDevDelta
- * - isVolHigh = volume > SMA(volume, 50) * 1.2
- * - buyCondition  = zScore > 2.0 && isVolHigh
- * - sellCondition = zScore < -2.0 && isVolHigh
- * - exitBuy  = zScore < 0.5 && EMA < EMA[1]
- * - exitSell = zScore > -0.5 && EMA > EMA[1]
- * - State machine: 0 (neutral), 1 (long), -1 (short)
+ * Karim EGX Signal Engine
+ * TypeScript port of the Karim EGX Pine Script indicator
  */
 
 import type { OHLCVCandle, SignalResult, SignalType } from "@/types";
 
 // --- Math helpers ---
 
-function ema(values: number[], period: number): number[] {
-  const result: number[] = [];
-  const k = 2 / (period + 1);
+function rma(values: number[], period: number): number[] {
+  const result: number[] = new Array(values.length).fill(NaN);
+  const alpha = 1 / period;
 
+  // Find the first index where values[i] is NOT NaN
+  let firstValidIndex = -1;
   for (let i = 0; i < values.length; i++) {
-    if (i === 0) {
-      result.push(values[0]);
-    } else if (i < period - 1) {
-      // Seed with SMA for the first `period` bars
-      const slice = values.slice(0, i + 1);
-      result.push(slice.reduce((a, b) => a + b, 0) / slice.length);
-    } else if (i === period - 1) {
-      // First proper EMA value: seed with SMA(period)
-      const seed = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
-      result.push(seed);
-    } else {
-      result.push(values[i] * k + result[i - 1] * (1 - k));
+    if (!isNaN(values[i])) {
+      firstValidIndex = i;
+      break;
     }
   }
+
+  if (firstValidIndex === -1) return result;
+
+  // Let's seed with SMA of the first `period` valid values
+  let sum = 0;
+  let count = 0;
+  for (let i = firstValidIndex; i < values.length; i++) {
+    if (isNaN(values[i])) continue;
+    sum += values[i];
+    count++;
+    if (count === period) {
+      result[i] = sum / period;
+      let lastRMA = result[i];
+      for (let j = i + 1; j < values.length; j++) {
+        if (!isNaN(values[j])) {
+          result[j] = alpha * values[j] + (1 - alpha) * lastRMA;
+          lastRMA = result[j];
+        } else {
+          result[j] = NaN;
+        }
+      }
+      break;
+    }
+  }
+
+  return result;
+}
+
+function rsi(closes: number[], period: number): number[] {
+  const result: number[] = new Array(closes.length).fill(NaN);
+  if (closes.length < period + 1) return result;
+
+  const up: number[] = new Array(closes.length).fill(NaN);
+  const down: number[] = new Array(closes.length).fill(NaN);
+
+  for (let i = 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    up[i] = diff > 0 ? diff : 0;
+    down[i] = diff < 0 ? -diff : 0;
+  }
+
+  const rmaUp = rma(up, period);
+  const rmaDown = rma(down, period);
+
+  for (let i = period; i < closes.length; i++) {
+    const u = rmaUp[i];
+    const d = rmaDown[i];
+
+    if (isNaN(u) || isNaN(d)) {
+      result[i] = NaN;
+    } else if (d === 0) {
+      result[i] = u === 0 ? 50 : 100;
+    } else if (u === 0) {
+      result[i] = 0;
+    } else {
+      const rs = u / d;
+      result[i] = 100 - 100 / (1 + rs);
+    }
+  }
+
   return result;
 }
 
 function sma(values: number[], period: number): number[] {
   const result: number[] = new Array(values.length).fill(NaN);
-  for (let i = period - 1; i < values.length; i++) {
+  for (let i = 0; i < values.length; i++) {
+    if (i < period - 1) continue;
     const slice = values.slice(i - period + 1, i + 1);
-    result[i] = slice.reduce((a, b) => a + b, 0) / period;
+    if (slice.some((v) => isNaN(v))) {
+      result[i] = NaN;
+    } else {
+      result[i] = slice.reduce((a, b) => a + b, 0) / period;
+    }
   }
   return result;
 }
 
-function stdev(values: number[], period: number): number[] {
+function ema(values: number[], period: number): number[] {
   const result: number[] = new Array(values.length).fill(NaN);
-  for (let i = period - 1; i < values.length; i++) {
-    const slice = values.slice(i - period + 1, i + 1);
-    const mean = slice.reduce((a, b) => a + b, 0) / period;
-    const variance =
-      slice.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / period;
-    result[i] = Math.sqrt(variance);
+  const k = 2 / (period + 1);
+
+  let firstValidIndex = -1;
+  for (let i = 0; i < values.length; i++) {
+    if (!isNaN(values[i])) {
+      firstValidIndex = i;
+      break;
+    }
   }
+
+  if (firstValidIndex === -1) return result;
+
+  let sum = 0;
+  let count = 0;
+  for (let i = firstValidIndex; i < values.length; i++) {
+    if (isNaN(values[i])) continue;
+    sum += values[i];
+    count++;
+    if (count === period) {
+      result[i] = sum / period;
+      let lastEMA = result[i];
+      for (let j = i + 1; j < values.length; j++) {
+        if (!isNaN(values[j])) {
+          result[j] = values[j] * k + lastEMA * (1 - k);
+          lastEMA = result[j];
+        } else {
+          result[j] = NaN;
+        }
+      }
+      break;
+    }
+  }
+
   return result;
 }
 
 // --- Main Signal Engine ---
 
-const EMA_LEN = 10;
-const LOOKBACK = 150;
-const VOL_PERIOD = 50;
-const ZSCORE_BUY = 2.0;
-const ZSCORE_SELL = -2.0;
-const ZSCORE_EXIT_BUY = 0.5;
-const ZSCORE_EXIT_SELL = -0.5;
-
 export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
   const n = candles.length;
 
-  // Need at least LOOKBACK + EMA_LEN + buffer candles
-  const minRequired = LOOKBACK + EMA_LEN + 10;
+  const minRequired = 85;
   if (n < minRequired) {
     return {
       signal: "none",
@@ -87,100 +150,52 @@ export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
   }
 
   const closes = candles.map((c) => c.close);
-  const volumes = candles.map((c) => c.volume);
 
-  // 1. Calculate EMA(close, 10)
-  const emaValues = ema(closes, EMA_LEN);
+  // 1. Calculate RSI(close, 50) and rsiBanker
+  const rsiValues = rsi(closes, 50);
+  const rsiBanker: number[] = new Array(n).fill(NaN);
 
-  // 2. deltaEMA = EMA - EMA[1]
-  const deltaEMA: number[] = new Array(n).fill(NaN);
-  for (let i = 1; i < n; i++) {
-    deltaEMA[i] = emaValues[i] - emaValues[i - 1];
-  }
-
-  // 3. Z-Score engine
-  const avgDelta = sma(deltaEMA, LOOKBACK);
-  const stdDevDelta = stdev(deltaEMA, LOOKBACK);
-
-  const zScores: number[] = new Array(n).fill(NaN);
-  for (let i = LOOKBACK; i < n; i++) {
-    if (!isNaN(avgDelta[i]) && stdDevDelta[i] > 0) {
-      zScores[i] = (deltaEMA[i] - avgDelta[i]) / stdDevDelta[i];
-    }
-  }
-
-  // 4. Volume filter: isVolHigh = volume > SMA(volume, 50) * 1.2
-  const smaVol = sma(volumes, VOL_PERIOD);
-  const isVolHigh: boolean[] = new Array(n).fill(false);
-  for (let i = VOL_PERIOD - 1; i < n; i++) {
-    if (!isNaN(smaVol[i])) {
-      isVolHigh[i] = volumes[i] > smaVol[i] * 1.2;
-    }
-  }
-
-  // 5. Buy/sell conditions
-  const buyCondition: boolean[] = new Array(n).fill(false);
-  const sellCondition: boolean[] = new Array(n).fill(false);
   for (let i = 0; i < n; i++) {
-    buyCondition[i] = zScores[i] > ZSCORE_BUY && isVolHigh[i];
-    sellCondition[i] = zScores[i] < ZSCORE_SELL && isVolHigh[i];
+    if (!isNaN(rsiValues[i])) {
+      let val = 1.5 * (rsiValues[i] - 50);
+      if (val > 20) val = 20;
+      if (val < 0) val = 0;
+      rsiBanker[i] = val;
+    }
   }
 
-  // 6. Exit conditions
-  const exitBuy: boolean[] = new Array(n).fill(false);
-  const exitSell: boolean[] = new Array(n).fill(false);
-  for (let i = 1; i < n; i++) {
-    exitBuy[i] = zScores[i] < ZSCORE_EXIT_BUY && emaValues[i] < emaValues[i - 1];
-    exitSell[i] =
-      zScores[i] > ZSCORE_EXIT_SELL && emaValues[i] > emaValues[i - 1];
+  // 2. Moving averages on rsiBanker
+  const bankma2 = sma(rsiBanker, 2);
+  const bankma7 = ema(rsiBanker, 7);
+  const bankma31 = ema(rsiBanker, 31);
+
+  // 3. Combined bankma
+  const bankma: number[] = new Array(n).fill(NaN);
+  for (let i = 0; i < n; i++) {
+    if (!isNaN(bankma2[i]) && !isNaN(bankma7[i]) && !isNaN(bankma31[i])) {
+      bankma[i] = (bankma2[i] * 70 + bankma7[i] * 20 + bankma31[i] * 10) / 100;
+    }
   }
 
-  // 7. State machine (Pine Script: var int state = 0)
-  const states: number[] = new Array(n).fill(0);
-  let state = 0;
+  // 4. Smoothing via rma to get banksignal
+  const banksignal = rma(bankma, 4);
 
-  for (let i = 1; i < n; i++) {
-    if (i === n - 1) {
-        console.log(`Debug stats: zScore=${zScores[i]}, isVolHigh=${isVolHigh[i]}, state_prev=${state}`);
-    }
-    // Pine Script logic (order matters):
-    // if buyCondition and state <= 0 → state := 1
-    // if sellCondition and state >= 0 → state := -1
-    // if (state==1 and exitBuy) or (state==-1 and exitSell) → state := 0
-    if (buyCondition[i] && state <= 0) {
-      state = 1;
-    }
-    if (sellCondition[i] && state >= 0) {
-      state = -1;
-    }
-    if ((state === 1 && exitBuy[i]) || (state === -1 && exitSell[i])) {
-      state = 0;
-    }
-    states[i] = state;
-  }
-
-  // 8. Detect signals (arrows) — matches plotshape conditions in Pine Script
-  // Buy arrow:  buyCondition[i]  && states[i-1] <= 0
-  // Sell arrow: sellCondition[i] && states[i-1] >= 0
-  // Exit Long:  state == 0 && state[i-1] == 1
-  // Exit Short: state == 0 && state[i-1] == -1
-
+  // 5. Signals & State determination
   let lastSignalBar: number | null = null;
   let lastSignalType: SignalType = "none";
 
   for (let i = 1; i < n; i++) {
-    if (buyCondition[i] && states[i - 1] <= 0) {
+    if (isNaN(banksignal[i]) || isNaN(banksignal[i - 1])) continue;
+
+    const crossover = banksignal[i] > 0.1 && banksignal[i - 1] <= 0.1;
+    const crossunder = banksignal[i] < 0.1 && banksignal[i - 1] >= 0.1;
+
+    if (crossover) {
       lastSignalBar = i;
       lastSignalType = "buy";
-    } else if (sellCondition[i] && states[i - 1] >= 0) {
-      lastSignalBar = i;
-      lastSignalType = "sell";
-    } else if (states[i] === 0 && states[i - 1] === 1) {
+    } else if (crossunder) {
       lastSignalBar = i;
       lastSignalType = "exit_long";
-    } else if (states[i] === 0 && states[i - 1] === -1) {
-      lastSignalBar = i;
-      lastSignalType = "exit_short";
     }
   }
 
@@ -188,10 +203,14 @@ export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
   const candlesAgo =
     lastSignalBar !== null ? currentBar - lastSignalBar : null;
 
+  // currentState: 1 if above 0.1, 0 if below 0.1 (black barcolor)
+  const currentState =
+    !isNaN(banksignal[currentBar]) && banksignal[currentBar] >= 0.1 ? 1 : 0;
+
   return {
     signal: lastSignalType,
     candlesAgo,
-    currentState: states[currentBar],
+    currentState,
     lastSignalBar,
   };
 }
