@@ -299,13 +299,12 @@ export function Dashboard() {
                 }}
               >
                 <img 
-                  src="/logo.png" 
+                  src="/logo.png?v=4" 
                   alt="Logo" 
                   style={{
                     width: "100%",
                     height: "100%",
-                    objectFit: "contain",
-                    mixBlendMode: "screen"
+                    objectFit: "contain"
                   }}
                 />
               </div>
