@@ -321,7 +321,7 @@ export function Dashboard() {
               }}
             >
               Universal Self-Adaptive EMA Pro · Egyptian Stock Exchange · H1 &
-              H4 · Powered by TradingView
+              H4 · Powered by Karim A. Ayad
             </p>
           </div>
 
