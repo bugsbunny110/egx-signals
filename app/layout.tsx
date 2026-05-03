@@ -3,10 +3,13 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "EGX Signal Scanner | Universal Self-Adaptive EMA Pro",
+  title: "EGX Signal Scanner | Universal Self-Adaptive Signal Radar Pro",
   description:
-    "Real-time Egyptian Stock Exchange signal scanner powered by the Universal Self-Adaptive EMA indicator. Monitor H1 and H4 timeframe signals for all major EGX stocks.",
-  keywords: "EGX, Egyptian stocks, trading signals, EMA, technical analysis",
+    "Real-time Egyptian Stock Exchange signal scanner powered by the Universal Self-Adaptive Signal Radar Pro. Monitor H1 and H4 timeframe signals for all major EGX stocks.",
+  keywords: "EGX, Egyptian stocks, trading signals, technical analysis",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
