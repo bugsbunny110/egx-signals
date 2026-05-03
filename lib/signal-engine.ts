@@ -164,6 +164,19 @@ export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
     }
   }
 
+  // 1b. Calculate RSI(close, 40) and rsiHotMoney
+  const rsiHotMoneyValues = rsi(closes, 40);
+  const rsiHotMoney: number[] = new Array(n).fill(NaN);
+
+  for (let i = 0; i < n; i++) {
+    if (!isNaN(rsiHotMoneyValues[i])) {
+      let val = 0.7 * (rsiHotMoneyValues[i] - 30);
+      if (val > 20) val = 20;
+      if (val < 0) val = 0;
+      rsiHotMoney[i] = val;
+    }
+  }
+
   // 2. Moving averages on rsiBanker
   const bankma2 = sma(rsiBanker, 2);
   const bankma7 = ema(rsiBanker, 7);
@@ -180,6 +193,21 @@ export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
   // 4. Smoothing via rma to get banksignal
   const banksignal = rma(bankma, 4);
 
+  // 4b. Hot Money calculations
+  const hotma2 = rma(rsiHotMoney, 2);
+  const hotma7 = rma(rsiHotMoney, 7);
+  const hotma31 = rma(rsiHotMoney, 31);
+
+  const hotCombined: number[] = new Array(n).fill(NaN);
+  for (let i = 0; i < n; i++) {
+    if (!isNaN(hotma2[i]) && !isNaN(hotma7[i]) && !isNaN(hotma31[i])) {
+      hotCombined[i] = (hotma2[i] * 34 + hotma7[i] * 33 + hotma31[i] * 33) / 100;
+    }
+  }
+
+  const hotma = ema(hotCombined, 2);
+  const hotsignal = rma(hotma, 2);
+
   // 5. Signals & State determination
   let lastSignalBar: number | null = null;
   let lastSignalType: SignalType = "none";
@@ -187,13 +215,31 @@ export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
   for (let i = 1; i < n; i++) {
     if (isNaN(banksignal[i]) || isNaN(banksignal[i - 1])) continue;
 
-    const crossover = banksignal[i] > 0.1 && banksignal[i - 1] <= 0.1;
-    const crossunder = banksignal[i] < 0.1 && banksignal[i - 1] >= 0.1;
+    const buyCrossover = banksignal[i] > 0.1 && banksignal[i - 1] <= 0.1;
 
-    if (crossover) {
+    const rsiBankerCrossunder = 
+      !isNaN(rsiBanker[i]) && 
+      !isNaN(rsiBanker[i - 1]) && 
+      rsiBanker[i] < 8.5 && 
+      rsiBanker[i - 1] >= 8.5;
+
+    const bearishCond =
+      rsiBankerCrossunder &&
+      !isNaN(rsiHotMoney[i]) &&
+      rsiHotMoney[i] < 18 &&
+      !isNaN(bankma[i]) &&
+      !isNaN(banksignal[i]) &&
+      bankma[i] < banksignal[i] &&
+      !isNaN(hotma[i]) &&
+      !isNaN(hotsignal[i]) &&
+      hotma[i] < hotsignal[i] &&
+      !isNaN(rsiBanker[i]) &&
+      rsiBanker[i] < 5;
+
+    if (buyCrossover) {
       lastSignalBar = i;
       lastSignalType = "buy";
-    } else if (crossunder) {
+    } else if (bearishCond) {
       lastSignalBar = i;
       lastSignalType = "exit_long";
     }
