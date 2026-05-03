@@ -330,7 +330,7 @@ export function Dashboard() {
                 maxWidth: "480px",
               }}
             >
-              Universal Self-Adaptive Signal Radar Pro · Egyptian Stock Exchange · Powered by Karim A. Ayad
+              Universal Self-Adaptive Signal Radar Pro · Egyptian Stock Exchange · <span style={{ color: "var(--color-gold)" }}>Powered by Karim A. Ayad</span>
             </p>
           </div>
 
