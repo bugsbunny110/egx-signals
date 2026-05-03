@@ -291,16 +291,26 @@ export function Dashboard() {
             >
               <div
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "9px",
-                  background: "linear-gradient(135deg, #f0b429, #b88a00)",
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  border: "1.5px solid var(--color-gold)",
+                  overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  background: "var(--bg-surface)",
                 }}
               >
-                <Zap size={18} color="#fff" />
+                <img 
+                  src="/logo.png" 
+                  alt="Logo" 
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover"
+                  }}
+                />
               </div>
               <h1
                 style={{
