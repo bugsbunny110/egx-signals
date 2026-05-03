@@ -212,16 +212,22 @@ export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
   let lastSignalBar: number | null = null;
   let lastSignalType: SignalType = "none";
 
+  const volumes = candles.map((c) => c.volume || 0);
+  const volAvg = sma(volumes, 20);
+
   for (let i = 1; i < n; i++) {
     if (isNaN(banksignal[i]) || isNaN(banksignal[i - 1])) continue;
 
     const buyCrossover = banksignal[i] > 0.1 && banksignal[i - 1] <= 0.1;
 
+    // Fixed by explicitly confirming rsi_Banker[1] was above the cross level
     const rsiBankerCrossunder = 
       !isNaN(rsiBanker[i]) && 
       !isNaN(rsiBanker[i - 1]) && 
       rsiBanker[i] < 8.5 && 
-      rsiBanker[i - 1] >= 8.5;
+      rsiBanker[i - 1] > 8.5;
+
+    const volumeOk = !isNaN(volAvg[i]) ? volumes[i] >= volAvg[i] * 1.0 : true;
 
     const bearishCond =
       rsiBankerCrossunder &&
@@ -233,8 +239,7 @@ export function runSignalEngine(candles: OHLCVCandle[]): SignalResult {
       !isNaN(hotma[i]) &&
       !isNaN(hotsignal[i]) &&
       hotma[i] < hotsignal[i] &&
-      !isNaN(rsiBanker[i]) &&
-      rsiBanker[i] < 5;
+      volumeOk;
 
     if (buyCrossover) {
       lastSignalBar = i;
