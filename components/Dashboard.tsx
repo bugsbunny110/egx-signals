@@ -330,8 +330,7 @@ export function Dashboard() {
                 maxWidth: "480px",
               }}
             >
-              Universal Self-Adaptive EMA Pro · Egyptian Stock Exchange · H1 &
-              H4 · Powered by Karim A. Ayad
+              Universal Self-Adaptive Signal Radar Pro · Egyptian Stock Exchange · Powered by Karim A. Ayad
             </p>
           </div>
 
