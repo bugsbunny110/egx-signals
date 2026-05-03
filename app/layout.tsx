@@ -9,11 +9,11 @@ export const metadata: Metadata = {
   keywords: "EGX, Egyptian stocks, trading signals, technical analysis",
   icons: {
     icon: [
-      { url: "/favicon.ico?v=2" },
-      { url: "/logo.png?v=2" },
+      { url: "/favicon.ico?v=3" },
+      { url: "/logo.png?v=3" },
     ],
-    shortcut: ["/favicon.ico?v=2"],
-    apple: ["/logo.png?v=2"],
+    shortcut: ["/favicon.ico?v=3"],
+    apple: ["/logo.png?v=3"],
   },
 };
 
