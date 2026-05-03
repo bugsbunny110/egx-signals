@@ -293,13 +293,9 @@ export function Dashboard() {
                 style={{
                   width: 38,
                   height: 38,
-                  borderRadius: "50%",
-                  border: "1.5px solid var(--color-gold)",
-                  overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background: "var(--bg-surface)",
                 }}
               >
                 <img 
@@ -308,7 +304,7 @@ export function Dashboard() {
                   style={{
                     width: "100%",
                     height: "100%",
-                    objectFit: "cover"
+                    objectFit: "contain"
                   }}
                 />
               </div>
