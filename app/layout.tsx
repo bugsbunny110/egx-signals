@@ -8,7 +8,12 @@ export const metadata: Metadata = {
     "Real-time Egyptian Stock Exchange signal scanner powered by the Universal Self-Adaptive Signal Radar Pro. Monitor H1 and H4 timeframe signals for all major EGX stocks.",
   keywords: "EGX, Egyptian stocks, trading signals, technical analysis",
   icons: {
-    icon: "/logo.png",
+    icon: [
+      { url: "/logo.png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: ["/logo.png"],
+    apple: ["/logo.png"],
   },
 };
 
